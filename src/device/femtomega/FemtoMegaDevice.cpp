@@ -34,7 +34,7 @@
 #include "FemtoMegaPropertyAccessor.hpp"
 #include "FemtoMegaFrameTimestampCalculator.hpp"
 
-#if defined(BUILD_NET_PAL)
+#ifdef BUILD_NET_PAL
 #include "ethernet/RTSPStreamPort.hpp"
 #endif
 
@@ -408,6 +408,7 @@ void FemtoMegaUsbDevice::initProperties() {
     CATCH_EXCEPTION_AND_EXECUTE({ LOG_ERROR("Set device communication type to usb mode failed!"); })
 }
 
+#ifdef BUILD_NET_PAL
 FemtoMegaNetDevice::FemtoMegaNetDevice(const std::shared_ptr<const IDeviceEnumInfo> &info) : DeviceBase(info) {
     init();
 }
@@ -860,4 +861,5 @@ void FemtoMegaNetDevice::fetchAllVideoStreamProfileList() {
         LOG_WARN("Get stream profile list failed!");
     }
 }
+#endif // BUILD_NET_PAL
 }  // namespace libobsensor

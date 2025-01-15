@@ -1,0 +1,641 @@
+diff --git a/3rdparty/libuvc/src/CMakeLists.txt b/3rdparty/libuvc/src/CMakeLists.txt
+index 696950e6..99e8787e 100644
+--- a/3rdparty/libuvc/src/CMakeLists.txt
++++ b/3rdparty/libuvc/src/CMakeLists.txt
+@@ -3,6 +3,12 @@ project(libuvc
+   VERSION 0.0.6
+   LANGUAGES C
+ )
++
++get_filename_component(PREFIX ${CMAKE_COMMAND} DIRECTORY)
++set(PREFIX "${PREFIX}/..")
++set(SYS_INC "${PREFIX}/include")
++include_directories(${SYS_INC})
++
+ # subdirectory_include(CORE_INC)
+ # Additional search scripts path for libusb-1.0, libjpeg, OpenCV
+ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
+@@ -26,6 +32,9 @@ option(BUILD_EXAMPLE "Build example program" OFF)
+ option(BUILD_TEST "Build test program" OFF)
+ option(ENABLE_UVC_DEBUGGING "Enable UVC debugging" OFF)
+ 
++find_package(PkgConfig REQUIRED)
++pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
++
+ set(libuvc_DESCRIPTION "A cross-platform library for USB video devices")
+ set(libuvc_URL "https://github.com/libuvc/libuvc")
+ 
+@@ -104,10 +113,10 @@ foreach(target_name IN LISTS UVC_TARGETS)
+       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
+       $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+       $<INSTALL_INTERFACE:include>
+-      ${LibUSB_INCLUDE_DIRS}
++      ${LIBUSB_INCLUDE_DIRS}
+   )
+ 
+-  target_link_libraries(${target_name} libusb::libusb)
++  target_link_libraries(${target_name} ${LIBUSB_LIBRARIES})
+ 
+   if(JPEG_FOUND)
+      include_directories( ${PROJECT_SOURCE_DIR}/../libjpeg/ )
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 4b7ff5e6..bb1530c9 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -42,6 +42,16 @@ include(cmake/global_config.cmake)
+ set(OB_PUBLIC_HEADERS_DIR ${CMAKE_CURRENT_LIST_DIR}/include/)
+ set(OB_3RDPARTY_DIR ${CMAKE_CURRENT_LIST_DIR}/3rdparty)
+ set(OB_PROJECT_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR})
++include_directories(${OB_3RDPARTY_DIR}/libuvc/src/include)
++
++find_package(spdlog REQUIRED)
++find_package(tinyxml2 REQUIRED)
++find_package(jsoncpp REQUIRED)
++find_package(dylib REQUIRED)
++find_package(libjpeg-turbo REQUIRED)
++# find_package(libyuv REQUIRED) ## TODO fix libyuv
++find_package(PkgConfig REQUIRED)
++pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
+ 
+ add_subdirectory(extensions)
+ add_subdirectory(src)
+diff --git a/cmake/compiler_flags.cmake b/cmake/compiler_flags.cmake
+index 2764b091..28e994be 100644
+--- a/cmake/compiler_flags.cmake
++++ b/cmake/compiler_flags.cmake
+@@ -35,14 +35,14 @@ if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_C_COMPILER_ID}" STREQU
+         list(APPEND CLANG_ALL_WARNINGS "-Wno-atomic-implicit-seq-cst") # Allow use of __sync_add_and_fetch() atomic
+     endif()
+     if(NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "AppleClang")
+-        set(CLANG_WARNINGS_AS_ERRORS "-Werror")
++        set(CLANG_WARNINGS_AS_ERRORS "-Wall")
+     endif()
+     add_compile_options(${CLANG_ALL_WARNINGS})
+     add_compile_options(${CLANG_WARNINGS_AS_ERRORS})
+ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
+     set(GNU_ALL_WARNINGS "-Wall" "-Wextra")
+     list(APPEND GNU_ALL_WARNINGS "-Wno-missing-field-initializers") # Allow c structs without all fields initialized
+-    set(GNU_WARNINGS_AS_ERRORS "-Werror")
++    set(GNU_WARNINGS_AS_ERRORS "-Wall")
+     add_compile_options(${GNU_ALL_WARNINGS})
+     add_compile_options(${GNU_WARNINGS_AS_ERRORS})
+ elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 49b31f26..464ed469 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -28,7 +28,9 @@ file(GLOB_RECURSE SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/impl/*.cpp ${CMAKE_CURR
+ file(GLOB_RECURSE HEADER_FILES ${CMAKE_CURRENT_LIST_DIR}/impl/*.hpp ${CMAKE_CURRENT_LIST_DIR}/context/*.hpp)
+ 
+ target_sources(OrbbecSDK PRIVATE ${SOURCE_FILES} ${HEADER_FILES})
+-target_link_libraries(OrbbecSDK PRIVATE ob::shared ob::core ob::filter ob::platform ob::device ob::pipeline)
++
++
++target_link_libraries(OrbbecSDK PRIVATE ob::shared ob::core ob::filter ob::platform ob::device ob::pipeline libuvc::libuvc)
+ target_include_directories(OrbbecSDK PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+ target_include_directories(
+     OrbbecSDK PUBLIC "$<BUILD_INTERFACE:${OB_PUBLIC_HEADERS_DIR}>" "$<INSTALL_INTERFACE:include>"
+@@ -39,7 +41,7 @@ if(UNIX)
+     target_link_libraries(OrbbecSDK PRIVATE Threads::Threads)
+ endif()
+ 
+-find_package(OpenGL REQUIRED)
++find_package(OpenGL)
+ 
+ if(OPENGL_FOUND)
+     include_directories(${OPENGL_INCLUDE_DIR})
+diff --git a/src/device/CMakeLists.txt b/src/device/CMakeLists.txt
+index 87002e57..08c5271a 100644
+--- a/src/device/CMakeLists.txt
++++ b/src/device/CMakeLists.txt
+@@ -29,8 +29,8 @@ add_subdirectory(femtomega) # FemtoMega
+ add_subdirectory(bootloader) # Bootloader device
+ 
+ # dependecies:
+-add_subdirectory(${OB_3RDPARTY_DIR}/jsoncpp jsoncpp)
+-target_link_libraries(${OB_TARGET_DEVICE} PUBLIC jsoncpp::jsoncpp)
++# add_subdirectory(${OB_3RDPARTY_DIR}/jsoncpp jsoncpp)
++target_link_libraries(${OB_TARGET_DEVICE} PUBLIC jsoncpp_lib)
+ 
+ add_library(ob::device ALIAS ${OB_TARGET_DEVICE})
+ ob_source_group(ob::device)
+diff --git a/src/device/devicemanager/DeviceManager.cpp b/src/device/devicemanager/DeviceManager.cpp
+index 55f2fd5e..5f9f15a4 100644
+--- a/src/device/devicemanager/DeviceManager.cpp
++++ b/src/device/devicemanager/DeviceManager.cpp
+@@ -9,7 +9,7 @@
+ #include "UsbDeviceEnumerator.hpp"
+ #endif
+ 
+-#if defined(BUILD_NET_PAL)
++#ifdef BUILD_NET_PAL
+ #include "NetDeviceEnumerator.hpp"
+ #endif
+ 
+@@ -53,7 +53,7 @@ DeviceManager::DeviceManager() : destroy_(false), multiDeviceSyncIntervalMs_(0)
+     deviceEnumerators_.emplace_back(usbDeviceEnumerator);
+ #endif
+ 
+-#if defined(BUILD_NET_PAL)
++#ifdef BUILD_NET_PAL
+     LOG_DEBUG("Enable Net Device Enumerator ...");
+     auto netDeviceEnumerator =
+         std::make_shared<NetDeviceEnumerator>([&](const DeviceEnumInfoList &removed, const DeviceEnumInfoList &added) { onDeviceChanged(removed, added); });
+@@ -79,7 +79,7 @@ DeviceManager::~DeviceManager() noexcept {
+ }
+ 
+ std::shared_ptr<IDevice> DeviceManager::createNetDevice(std::string address, uint16_t port) {
+-#if defined(BUILD_NET_PAL)
++#ifdef BUILD_NET_PAL
+     LOG_DEBUG("DeviceManager createNetDevice.... address={0}, port={1}", address, port);
+     auto deviceInfo = NetDeviceEnumerator::queryNetDevice(address, port);
+     if(!deviceInfo) {
+@@ -237,7 +237,7 @@ void DeviceManager::enableDeviceClockSync(uint64_t repeatInterval) {
+ }
+ 
+ void DeviceManager::enableNetDeviceEnumeration(bool enable) {
+-#if defined(BUILD_NET_PAL)
++#ifdef BUILD_NET_PAL
+     LOG_INFO("Enable net device enumeration: {0}", enable);
+     auto iter = std::find_if(deviceEnumerators_.begin(), deviceEnumerators_.end(), [](const std::shared_ptr<IDeviceEnumerator> &enumerator) {  //
+         return std::dynamic_pointer_cast<NetDeviceEnumerator>(enumerator) != nullptr;
+@@ -258,7 +258,7 @@ void DeviceManager::enableNetDeviceEnumeration(bool enable) {
+ }
+ 
+ bool DeviceManager::isNetDeviceEnumerationEnable() const {
+-#if defined(BUILD_NET_PAL)
++#ifdef BUILD_NET_PAL
+ 
+     auto iter = std::find_if(deviceEnumerators_.begin(), deviceEnumerators_.end(), [](const std::shared_ptr<IDeviceEnumerator> &enumerator) {  //
+         return std::dynamic_pointer_cast<NetDeviceEnumerator>(enumerator) != nullptr;
+diff --git a/src/device/femtomega/FemtoMegaDevice.cpp b/src/device/femtomega/FemtoMegaDevice.cpp
+index 2086b167..3d7f3cd1 100644
+--- a/src/device/femtomega/FemtoMegaDevice.cpp
++++ b/src/device/femtomega/FemtoMegaDevice.cpp
+@@ -34,7 +34,7 @@
+ #include "FemtoMegaPropertyAccessor.hpp"
+ #include "FemtoMegaFrameTimestampCalculator.hpp"
+ 
+-#if defined(BUILD_NET_PAL)
++#ifdef BUILD_NET_PAL
+ #include "ethernet/RTSPStreamPort.hpp"
+ #endif
+ 
+@@ -408,6 +408,7 @@ void FemtoMegaUsbDevice::initProperties() {
+     CATCH_EXCEPTION_AND_EXECUTE({ LOG_ERROR("Set device communication type to usb mode failed!"); })
+ }
+ 
++#ifdef BUILD_NET_PAL
+ FemtoMegaNetDevice::FemtoMegaNetDevice(const std::shared_ptr<const IDeviceEnumInfo> &info) : DeviceBase(info) {
+     init();
+ }
+@@ -860,4 +861,5 @@ void FemtoMegaNetDevice::fetchAllVideoStreamProfileList() {
+         LOG_WARN("Get stream profile list failed!");
+     }
+ }
++#endif // BUILD_NET_PAL
+ }  // namespace libobsensor
+diff --git a/src/device/femtomega/FemtoMegaDevice.hpp b/src/device/femtomega/FemtoMegaDevice.hpp
+index e45ead5e..039a77b2 100644
+--- a/src/device/femtomega/FemtoMegaDevice.hpp
++++ b/src/device/femtomega/FemtoMegaDevice.hpp
+@@ -26,6 +26,7 @@ private:
+     uint64_t frameTimeFreq_  = 1000;
+ };
+ 
++#ifdef BUILD_NET_PAL
+ class FemtoMegaNetDevice : public DeviceBase {
+ public:
+     FemtoMegaNetDevice(const std::shared_ptr<const IDeviceEnumInfo> &info);
+@@ -48,4 +49,5 @@ private:
+     StreamProfileList allVideoStreamProfileList_;  // fetch from device via vendor-specific protocol for all types of video stream
+ };
+ 
++#endif // BUILD_NET_PAL
+ }  // namespace libobsensor
+diff --git a/src/device/femtomega/FemtoMegaDeviceInfo.cpp b/src/device/femtomega/FemtoMegaDeviceInfo.cpp
+index 3d922e51..2d8b6edd 100644
+--- a/src/device/femtomega/FemtoMegaDeviceInfo.cpp
++++ b/src/device/femtomega/FemtoMegaDeviceInfo.cpp
+@@ -8,8 +8,12 @@
+ #include "ethernet/NetPortGroup.hpp"
+ #include "utils/Utils.hpp"
+ #include "exception/ObException.hpp"
++
++#ifdef BUILD_NET_PAL
+ #include "ethernet/RTSPStreamPort.hpp"
+ #include "ethernet/NetDataStreamPort.hpp"
++#endif
++
+ namespace libobsensor {
+ const std::map<int, std::string> FemtoMegaDeviceNameMap = {
+     { 0x06c0, "Femto Mega i" },
+@@ -63,12 +67,12 @@ FemtoMegaDeviceInfo::~FemtoMegaDeviceInfo() noexcept {}
+ 
+ std::shared_ptr<IDevice> FemtoMegaDeviceInfo::createDevice() const {
+     std::shared_ptr<IDevice> device;
+-    if(connectionType_ == "Ethernet") {
++#ifdef BUILD_NET_PAL
++    if(connectionType_ == "Ethernet")
+         device = std::make_shared<FemtoMegaNetDevice>(shared_from_this());
+-    }
+-    else {
++    else
++#endif
+         device = std::make_shared<FemtoMegaUsbDevice>(shared_from_this());
+-    }
+     return device;
+ }
+ 
+@@ -88,6 +92,8 @@ std::vector<std::shared_ptr<IDeviceEnumInfo>> FemtoMegaDeviceInfo::pickDevices(c
+     return femtoMegaDeviceInfos;
+ }
+ 
++#ifdef BUILD_NET_PAL
++
+ std::vector<std::shared_ptr<IDeviceEnumInfo>> FemtoMegaDeviceInfo::pickNetDevices(const SourcePortInfoList infoList) {
+     std::vector<std::shared_ptr<IDeviceEnumInfo>> femtoMegaDeviceInfos;
+     auto                                          remainder = FilterNetPortInfoByPid(infoList, FemtoMegaDevPids);
+@@ -115,4 +121,6 @@ std::vector<std::shared_ptr<IDeviceEnumInfo>> FemtoMegaDeviceInfo::pickNetDevice
+     return femtoMegaDeviceInfos;
+ }
+ 
++#endif
++
+ }  // namespace libobsensor
+diff --git a/src/device/femtomega/FemtoMegaDeviceInfo.hpp b/src/device/femtomega/FemtoMegaDeviceInfo.hpp
+index 7832f775..ace4600b 100644
+--- a/src/device/femtomega/FemtoMegaDeviceInfo.hpp
++++ b/src/device/femtomega/FemtoMegaDeviceInfo.hpp
+@@ -17,7 +17,9 @@ public:
+ 
+     std::shared_ptr<IDevice>                             createDevice() const override;
+     static std::vector<std::shared_ptr<IDeviceEnumInfo>> pickDevices(const SourcePortInfoList infoList);
++#ifdef BUILD_NET_PAL
+     static std::vector<std::shared_ptr<IDeviceEnumInfo>> pickNetDevices(const SourcePortInfoList infoList);
++#endif
+ };
+ 
+ }  // namespace libobsensor
+diff --git a/src/device/gemini2/G2DeviceInfo.cpp b/src/device/gemini2/G2DeviceInfo.cpp
+index d7f540ad..7b48bf07 100644
+--- a/src/device/gemini2/G2DeviceInfo.cpp
++++ b/src/device/gemini2/G2DeviceInfo.cpp
+@@ -9,9 +9,12 @@
+ #include "DevicePids.hpp"
+ #include "utils/Utils.hpp"
+ #include "exception/ObException.hpp"
++
++#ifdef BUILD_NET_PAL
+ #include "ethernet/NetPortGroup.hpp"
+ #include "ethernet/RTSPStreamPort.hpp"
+ #include "ethernet/NetDataStreamPort.hpp"
++#endif
+ 
+ #include <map>
+ 
+@@ -43,6 +46,8 @@ G2DeviceInfo::G2DeviceInfo(const SourcePortInfoList groupedInfoList) {
+         connectionType_     = portInfo->connSpec;
+         sourcePortInfoList_ = groupedInfoList;
+     }
++
++#ifdef BUILD_NET_PAL
+     else if(IS_NET_PORT(firstPortInfo->portType)) {
+         auto portInfo = std::dynamic_pointer_cast<const NetSourcePortInfo>(groupedInfoList.front());
+ 
+@@ -62,6 +67,7 @@ G2DeviceInfo::G2DeviceInfo(const SourcePortInfoList groupedInfoList) {
+         connectionType_     = "Ethernet";
+         sourcePortInfoList_ = groupedInfoList;
+     }
++#endif
+     else {
+         throw invalid_value_exception("Invalid port type");
+     }
+@@ -71,9 +77,11 @@ G2DeviceInfo::~G2DeviceInfo() noexcept {}
+ 
+ std::shared_ptr<IDevice> G2DeviceInfo::createDevice() const {
+     if(pid_ == 0x0671) {
++#ifdef BUILD_NET_PAL
+         if(IS_NET_PORT(sourcePortInfoList_.front()->portType)) {
+             return std::make_shared<G2XLNetDevice>(shared_from_this());
+         }
++#endif
+         return std::make_shared<G2XLUSBDevice>(shared_from_this());
+     }
+     else if(pid_ == 0x0808 || pid_ == 0x0809) {
+@@ -98,6 +106,7 @@ std::vector<std::shared_ptr<IDeviceEnumInfo>> G2DeviceInfo::pickDevices(const So
+     return G2DeviceInfos;
+ }
+ 
++#ifdef BUILD_NET_PAL
+ std::vector<std::shared_ptr<IDeviceEnumInfo>> G2DeviceInfo::pickNetDevices(const SourcePortInfoList infoList) {
+     std::vector<std::shared_ptr<IDeviceEnumInfo>> gemini2DeviceInfos;
+     auto                                          remainder = FilterNetPortInfoByPid(infoList, Gemini2DevPids);
+@@ -125,5 +134,6 @@ std::vector<std::shared_ptr<IDeviceEnumInfo>> G2DeviceInfo::pickNetDevices(const
+ 
+     return gemini2DeviceInfos;
+ }
++#endif
+ 
+ }  // namespace libobsensor
+diff --git a/src/device/gemini2/G2DeviceInfo.hpp b/src/device/gemini2/G2DeviceInfo.hpp
+index c9313f21..6566d4ac 100644
+--- a/src/device/gemini2/G2DeviceInfo.hpp
++++ b/src/device/gemini2/G2DeviceInfo.hpp
+@@ -19,7 +19,10 @@ public:
+     std::shared_ptr<IDevice> createDevice() const override;
+ 
+     static std::vector<std::shared_ptr<IDeviceEnumInfo>> pickDevices(const SourcePortInfoList infoList);
++#ifdef BUILD_NET_PAL
+     static std::vector<std::shared_ptr<IDeviceEnumInfo>> pickNetDevices(const SourcePortInfoList infoList);
++#endif
++
+ };
+ 
+ }  // namespace libobsensor
+diff --git a/src/device/gemini2/G2XLDevice.cpp b/src/device/gemini2/G2XLDevice.cpp
+index d2f962ee..e859792d 100644
+--- a/src/device/gemini2/G2XLDevice.cpp
++++ b/src/device/gemini2/G2XLDevice.cpp
+@@ -39,7 +39,7 @@
+ 
+ #include <algorithm>
+ 
+-#if defined(BUILD_NET_PAL)
++#ifdef BUILD_NET_PAL
+ #include "ethernet/RTSPStreamPort.hpp"
+ #endif
+ 
+@@ -590,6 +590,8 @@ void G2XLUSBDevice::initProperties() {
+     CATCH_EXCEPTION_AND_EXECUTE({ LOG_ERROR("Set device communication type to ethernet mode failed!"); })
+ }
+ 
++#ifdef BUILD_NET_PAL
++
+ G2XLNetDevice::G2XLNetDevice(const std::shared_ptr<const IDeviceEnumInfo> &info) : G2XLDeviceBase(info) {
+     init();
+ }
+@@ -1110,4 +1112,6 @@ void G2XLNetDevice::fetchDeviceInfo() {
+     extensionInfo_["AllSensorsUsingSameClock"] = "true";
+ }
+ 
++#endif
++
+ }  // namespace libobsensor
+diff --git a/src/device/gemini2/G2XLDevice.hpp b/src/device/gemini2/G2XLDevice.hpp
+index a56c07ef..04c765da 100644
+--- a/src/device/gemini2/G2XLDevice.hpp
++++ b/src/device/gemini2/G2XLDevice.hpp
+@@ -40,6 +40,7 @@ private:
+     const uint64_t frameTimeFreq_ = 1000000;
+ };
+ 
++#ifdef BUILD_NET_PAL
+ class G2XLNetDevice : public G2XLDeviceBase {
+ public:
+     G2XLNetDevice(const std::shared_ptr<const IDeviceEnumInfo> &info);
+@@ -57,6 +58,7 @@ private:
+     const uint64_t frameTimeFreq_      = 1000;
+     const uint64_t colorframeTimeFreq_ = 90000;
+ };
++#endif
+ 
+ }  // namespace libobsensor
+ 
+diff --git a/src/device/gemini330/G330DeviceInfo.cpp b/src/device/gemini330/G330DeviceInfo.cpp
+index 0309d3be..0ab06554 100644
+--- a/src/device/gemini330/G330DeviceInfo.cpp
++++ b/src/device/gemini330/G330DeviceInfo.cpp
+@@ -66,6 +66,7 @@ std::vector<std::shared_ptr<IDeviceEnumInfo>> G330DeviceInfo::pickDevices(const
+         iter++;
+     }
+ 
++#ifdef BUILD_NET_PAL
+     // pick ethernet device
+     remainder = FilterNetPortInfoByPid(infoList, G330DevPids);
+     groups    = utils::groupVector<std::shared_ptr<const SourcePortInfo>>(remainder, GroupNetSourcePortByMac);
+@@ -77,8 +78,10 @@ std::vector<std::shared_ptr<IDeviceEnumInfo>> G330DeviceInfo::pickDevices(const
+         }
+         iter++;
+     }
++#endif // BUILD_NET_PAL
+ 
+     return G330DeviceInfos;
+ }
+ 
++
+ }  // namespace libobsensor
+diff --git a/src/filter/CMakeLists.txt b/src/filter/CMakeLists.txt
+index 3a90c097..a0d7ada1 100644
+--- a/src/filter/CMakeLists.txt
++++ b/src/filter/CMakeLists.txt
+@@ -16,14 +16,14 @@ target_sources(filter PRIVATE ${SOURCE_FILES} ${HEADERS_FILES})
+ target_link_libraries(filter PUBLIC ob::shared ob::core )
+ target_include_directories(filter PUBLIC ${OB_PUBLIC_HEADERS_DIR} ${CMAKE_CURRENT_LIST_DIR})
+ 
+-add_subdirectory(${OB_3RDPARTY_DIR}/dylib dylib)
+-target_link_libraries(filter PUBLIC dylib::dylib)
++# add_subdirectory(${OB_3RDPARTY_DIR}/dylib dylib)
++target_include_directories(filter PUBLIC dylib)
+ 
+-add_subdirectory(${OB_3RDPARTY_DIR}/libjpeg libjpeg)
+-target_link_libraries(filter PUBLIC libjpeg::libjpeg)
++# add_subdirectory(${OB_3RDPARTY_DIR}/libjpeg libjpeg)
++target_link_libraries(filter PUBLIC libjpeg-turbo::turbojpeg)
+ 
+-add_subdirectory(${OB_3RDPARTY_DIR}/libyuv libyuv)
+-target_link_libraries(filter PUBLIC libyuv::libyuv)
++# add_subdirectory(${OB_3RDPARTY_DIR}/libyuv libyuv)
++target_link_libraries(filter PUBLIC yuv)
+ 
+ add_library(ob::filter ALIAS filter)
+ ob_source_group(ob::filter)
+diff --git a/src/platform/CMakeLists.txt b/src/platform/CMakeLists.txt
+index aac8f140..0be72ab3 100644
+--- a/src/platform/CMakeLists.txt
++++ b/src/platform/CMakeLists.txt
+@@ -13,12 +13,12 @@ target_include_directories(${OB_TARGET_PAL} PUBLIC ${OB_PUBLIC_HEADERS_DIR} ${CM
+ 
+ if(OB_BUILD_USB_PAL)
+     add_subdirectory(usb)
+-    add_subdirectory(${OB_3RDPARTY_DIR}/libusb libusb)
+-    target_link_libraries(${OB_TARGET_PAL} PUBLIC libusb::libusb)
++    # add_subdirectory(${OB_3RDPARTY_DIR}/libusb libusb)
++    target_include_directories(${OB_TARGET_PAL} PUBLIC ${LIBUSB_INCLUDE_DIRS})
++    target_link_libraries(${OB_TARGET_PAL} PUBLIC ${LIBUSB_LIBRARIES})
+ 
+     if(NOT OB_BUILD_WIN32)
+         add_subdirectory(${OB_3RDPARTY_DIR}/libuvc libuvc)
+-        target_link_libraries(${OB_TARGET_PAL} PUBLIC libuvc::libuvc)
+     endif()
+ elseif(OB_BUILD_GMSL_PAL)
+     add_subdirectory(usb)
+@@ -27,7 +27,7 @@ endif()
+ 
+ if(OB_BUILD_NET_PAL)
+     add_subdirectory(ethernet)
+-    add_subdirectory(${OB_3RDPARTY_DIR}/live555 live555)
++    # add_subdirectory(${OB_3RDPARTY_DIR}/live555 live555)
+     target_link_libraries(${OB_TARGET_PAL} PUBLIC live555::live555)
+ endif()
+ 
+diff --git a/src/platform/IPal.hpp b/src/platform/IPal.hpp
+index e7f0c90f..480ea6fa 100644
+--- a/src/platform/IPal.hpp
++++ b/src/platform/IPal.hpp
+@@ -21,7 +21,7 @@ public:
+ std::shared_ptr<IPal> createUsbPal();
+ #endif
+ 
+-#if defined(BUILD_NET_PAL)
++#ifdef BUILD_NET_PAL
+ std::shared_ptr<IPal> createNetPal();
+ #endif
+ }  // namespace libobsensor
+diff --git a/src/platform/Platform.cpp b/src/platform/Platform.cpp
+index 13094131..5d34cbd8 100644
+--- a/src/platform/Platform.cpp
++++ b/src/platform/Platform.cpp
+@@ -30,7 +30,7 @@ Platform::Platform() {
+     palMap_.insert(std::make_pair("usb", usbPal));
+ #endif
+ 
+-#if defined(BUILD_NET_PAL)
++#ifdef BUILD_NET_PAL
+     auto netPal = createNetPal();
+     palMap_.insert(std::make_pair("net", netPal));
+ #endif
+diff --git a/src/platform/usb/pal/android/AndroidUsbPal.cpp b/src/platform/usb/pal/android/AndroidUsbPal.cpp
+index c3dc03ea..511a018f 100644
+--- a/src/platform/usb/pal/android/AndroidUsbPal.cpp
++++ b/src/platform/usb/pal/android/AndroidUsbPal.cpp
+@@ -13,7 +13,7 @@
+ #include "exception/ObException.hpp"
+ #endif
+ 
+-#if defined(BUILD_NET_PAL)
++#ifdef BUILD_NET_PAL
+ #include "ethernet/Ethernet.hpp"
+ #endif
+ 
+@@ -82,7 +82,7 @@ std::shared_ptr<ISourcePort> AndroidUsbPal::getSourcePort(std::shared_ptr<const
+     }
+ #endif
+ 
+-#if defined(BUILD_NET_PAL)
++#ifdef BUILD_NET_PAL
+     case SOURCE_PORT_NET_VENDOR:
+         port = std::make_shared<VendorNetDataPort>(std::dynamic_pointer_cast<const NetSourcePortInfo>(portInfo));
+         break;
+diff --git a/src/shared/CMakeLists.txt b/src/shared/CMakeLists.txt
+index 925e3078..e24c6f68 100644
+--- a/src/shared/CMakeLists.txt
++++ b/src/shared/CMakeLists.txt
+@@ -11,11 +11,11 @@ file(GLOB_RECURSE SOURCE_FILES "*.cpp" EXCLUDE unittest)
+ file(GLOB_RECURSE HEADERS_FILES "*.hpp" EXCLUDE unittest)
+ target_sources(shared PRIVATE ${SOURCE_FILES} ${HEADERS_FILES})
+ 
+-add_subdirectory(${OB_3RDPARTY_DIR}/spdlog spdlog)
++#add_subdirectory(${OB_3RDPARTY_DIR}/spdlog spdlog)
+ target_link_libraries(shared PUBLIC spdlog::spdlog)
+ target_include_directories(shared PUBLIC ${OB_PUBLIC_HEADERS_DIR} ${CMAKE_CURRENT_LIST_DIR})
+ 
+-add_subdirectory(${OB_3RDPARTY_DIR}/tinyxml2 tinyxml2)
++#add_subdirectory(${OB_3RDPARTY_DIR}/tinyxml2 tinyxml2)
+ target_link_libraries(shared PUBLIC tinyxml2::tinyxml2)
+ 
+ add_subdirectory(environment)
+diff --git a/src/shared/logger/Logger.cpp b/src/shared/logger/Logger.cpp
+index d7cc80d9..c0afad0e 100644
+--- a/src/shared/logger/Logger.cpp
++++ b/src/shared/logger/Logger.cpp
+@@ -90,7 +90,7 @@ std::shared_ptr<Logger> Logger::getInstance() {
+     return instance;
+ }
+ 
+-Logger::Logger() : spdlogRegistry_(spdlog::details::registry::instance_ptr()) {
++Logger::Logger()  {
+     spdlog::set_pattern(OB_DEFAULT_LOG_FMT);
+ 
+     std::lock_guard<std::mutex> lock(logIntvlRecordMapMtx);
+@@ -129,7 +129,7 @@ Logger::~Logger() noexcept {
+         callbackSink_.reset();
+     }
+ 
+-    spdlogRegistry_.reset();
++    spdlog::shutdown();
+ }
+ 
+ void Logger::createFileSink() {
+diff --git a/src/shared/logger/Logger.hpp b/src/shared/logger/Logger.hpp
+index 43ebfcdb..222424c5 100644
+--- a/src/shared/logger/Logger.hpp
++++ b/src/shared/logger/Logger.hpp
+@@ -76,7 +76,5 @@ private:
+     spdlog::sink_ptr consoleSink_;
+     spdlog::sink_ptr fileSink_;
+     spdlog::sink_ptr callbackSink_;
+-
+-    std::shared_ptr<spdlog::details::registry> spdlogRegistry_;  // handle spdlog registry instance to control it's life cycle
+ };
+ }  // namespace libobsensor
+diff --git a/src/shared/logger/LoggerTypeHelper.hpp b/src/shared/logger/LoggerTypeHelper.hpp
+index 7edce314..966058c0 100644
+--- a/src/shared/logger/LoggerTypeHelper.hpp
++++ b/src/shared/logger/LoggerTypeHelper.hpp
+@@ -1,7 +1,7 @@
+ #pragma once
+ 
+ #include <sstream>
+-#include <spdlog/fmt/bundled/format.h>
++#include <spdlog/spdlog.h>
+ #include "utils/PublicTypeHelper.hpp"
+ 
+ #define OB_LOG_FORMATTER(type)                                                                                       \
+diff --git a/src/shared/xml/XmlReader.cpp b/src/shared/xml/XmlReader.cpp
+index 71d083bf..7e8cc25c 100644
+--- a/src/shared/xml/XmlReader.cpp
++++ b/src/shared/xml/XmlReader.cpp
+@@ -2,7 +2,7 @@
+ // Licensed under the MIT License.
+ 
+ #include "XmlReader.hpp"
+-#include "tinyxml2.hpp"
++#include "tinyxml2.h"
+ 
+ #include "logger/Logger.hpp"
+ #include "exception/ObException.hpp"
+diff --git a/src/shared/xml/XmlReader.hpp b/src/shared/xml/XmlReader.hpp
+index 69d8e536..3d68081e 100644
+--- a/src/shared/xml/XmlReader.hpp
++++ b/src/shared/xml/XmlReader.hpp
+@@ -9,6 +9,7 @@
+ 
+ #include <libobsensor/h/ObTypes.h>
+ 
++
+ #include <stdarg.h>
+ #include <algorithm>
+ #include <memory>
+@@ -16,7 +17,7 @@
+ #include <vector>
+ #include <map>
+ 
+-namespace libobsensor {
++namespace tinyxml2 {
+ class XMLDocument;
+ class XMLElement;
+ class XMLAttribute;
+@@ -25,6 +26,12 @@ class XMLText;
+ class XMLDeclaration;
+ class XMLUnknown;
+ class XMLPrinter;
++}
++
++namespace libobsensor {
++
++using namespace tinyxml2;
++
+ class XmlReader final {
+ 
+ public:

@@ -9,6 +9,7 @@
 
 #include <libobsensor/h/ObTypes.h>
 
+
 #include <stdarg.h>
 #include <algorithm>
 #include <memory>
@@ -16,7 +17,7 @@
 #include <vector>
 #include <map>
 
-namespace libobsensor {
+namespace tinyxml2 {
 class XMLDocument;
 class XMLElement;
 class XMLAttribute;
@@ -25,6 +26,12 @@ class XMLText;
 class XMLDeclaration;
 class XMLUnknown;
 class XMLPrinter;
+}
+
+namespace libobsensor {
+
+using namespace tinyxml2;
+
 class XmlReader final {
 
 public:

@@ -42,6 +42,16 @@ include(cmake/global_config.cmake)
 set(OB_PUBLIC_HEADERS_DIR ${CMAKE_CURRENT_LIST_DIR}/include/)
 set(OB_3RDPARTY_DIR ${CMAKE_CURRENT_LIST_DIR}/3rdparty)
 set(OB_PROJECT_ROOT_DIR ${CMAKE_CURRENT_LIST_DIR})
+include_directories(${OB_3RDPARTY_DIR}/libuvc/src/include)
+
+find_package(spdlog REQUIRED)
+find_package(tinyxml2 REQUIRED)
+find_package(jsoncpp REQUIRED)
+find_package(dylib REQUIRED)
+find_package(libjpeg-turbo REQUIRED)
+# find_package(libyuv REQUIRED) ## TODO fix libyuv
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
 
 add_subdirectory(extensions)
 add_subdirectory(src)

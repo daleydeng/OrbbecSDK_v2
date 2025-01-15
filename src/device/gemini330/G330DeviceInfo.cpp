@@ -66,6 +66,7 @@ std::vector<std::shared_ptr<IDeviceEnumInfo>> G330DeviceInfo::pickDevices(const 
         iter++;
     }
 
+#ifdef BUILD_NET_PAL
     // pick ethernet device
     remainder = FilterNetPortInfoByPid(infoList, G330DevPids);
     groups    = utils::groupVector<std::shared_ptr<const SourcePortInfo>>(remainder, GroupNetSourcePortByMac);
@@ -77,8 +78,10 @@ std::vector<std::shared_ptr<IDeviceEnumInfo>> G330DeviceInfo::pickDevices(const 
         }
         iter++;
     }
+#endif // BUILD_NET_PAL
 
     return G330DeviceInfos;
 }
+
 
 }  // namespace libobsensor

@@ -40,6 +40,7 @@ private:
     const uint64_t frameTimeFreq_ = 1000000;
 };
 
+#ifdef BUILD_NET_PAL
 class G2XLNetDevice : public G2XLDeviceBase {
 public:
     G2XLNetDevice(const std::shared_ptr<const IDeviceEnumInfo> &info);
@@ -57,6 +58,7 @@ private:
     const uint64_t frameTimeFreq_      = 1000;
     const uint64_t colorframeTimeFreq_ = 90000;
 };
+#endif
 
 }  // namespace libobsensor
 

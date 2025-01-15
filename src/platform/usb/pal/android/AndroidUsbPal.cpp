@@ -13,7 +13,7 @@
 #include "exception/ObException.hpp"
 #endif
 
-#if defined(BUILD_NET_PAL)
+#ifdef BUILD_NET_PAL
 #include "ethernet/Ethernet.hpp"
 #endif
 
@@ -82,7 +82,7 @@ std::shared_ptr<ISourcePort> AndroidUsbPal::getSourcePort(std::shared_ptr<const 
     }
 #endif
 
-#if defined(BUILD_NET_PAL)
+#ifdef BUILD_NET_PAL
     case SOURCE_PORT_NET_VENDOR:
         port = std::make_shared<VendorNetDataPort>(std::dynamic_pointer_cast<const NetSourcePortInfo>(portInfo));
         break;

@@ -1,0 +1,43 @@
+context:
+  name: orbbecsdk
+  version: "2.1.1"
+
+package:
+  name: ${{ name }}
+  version: ${{ version }}
+
+source:
+  - git: https://github.com/orbbec/OrbbecSDK_v2.git
+    branch: main
+    patches:
+      - fix_build.patch
+
+build:
+  number: 1000
+
+requirements:
+  run_exports:
+    - ${{ name }}
+  build:
+    - ${{ compiler('cxx') }}
+    - ${{ stdlib('c') }}
+    - cmake
+    - ninja
+    - pkg-config
+  host:
+    - dylib
+    - libjpeg-turbo
+    - spdlog
+    - tinyxml2
+    - libusb
+    - jsoncpp
+    - libyuv
+
+tests:
+  - script:
+      - if: unix
+        then: test -f ${PREFIX}/include/libobsensor/ObSensor.h
+
+about:
+  license: MIT
+  summary: This is the open source library of the Orbbec SDK v2.x. The Orbbec SDK is a cross-platform library for interfacing with the Orbbec RGB-D cameras. It provides C/C++ APIs and many other languages or frameworks wrappers.

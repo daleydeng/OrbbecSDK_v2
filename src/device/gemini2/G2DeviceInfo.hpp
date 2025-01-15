@@ -19,7 +19,10 @@ public:
     std::shared_ptr<IDevice> createDevice() const override;
 
     static std::vector<std::shared_ptr<IDeviceEnumInfo>> pickDevices(const SourcePortInfoList infoList);
+#ifdef BUILD_NET_PAL
     static std::vector<std::shared_ptr<IDeviceEnumInfo>> pickNetDevices(const SourcePortInfoList infoList);
+#endif
+
 };
 
 }  // namespace libobsensor

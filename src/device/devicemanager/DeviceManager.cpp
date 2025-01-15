@@ -9,7 +9,7 @@
 #include "UsbDeviceEnumerator.hpp"
 #endif
 
-#if defined(BUILD_NET_PAL)
+#ifdef BUILD_NET_PAL
 #include "NetDeviceEnumerator.hpp"
 #endif
 
@@ -53,7 +53,7 @@ DeviceManager::DeviceManager() : destroy_(false), multiDeviceSyncIntervalMs_(0) 
     deviceEnumerators_.emplace_back(usbDeviceEnumerator);
 #endif
 
-#if defined(BUILD_NET_PAL)
+#ifdef BUILD_NET_PAL
     LOG_DEBUG("Enable Net Device Enumerator ...");
     auto netDeviceEnumerator =
         std::make_shared<NetDeviceEnumerator>([&](const DeviceEnumInfoList &removed, const DeviceEnumInfoList &added) { onDeviceChanged(removed, added); });
@@ -79,7 +79,7 @@ DeviceManager::~DeviceManager() noexcept {
 }
 
 std::shared_ptr<IDevice> DeviceManager::createNetDevice(std::string address, uint16_t port) {
-#if defined(BUILD_NET_PAL)
+#ifdef BUILD_NET_PAL
     LOG_DEBUG("DeviceManager createNetDevice.... address={0}, port={1}", address, port);
     auto deviceInfo = NetDeviceEnumerator::queryNetDevice(address, port);
     if(!deviceInfo) {
@@ -237,7 +237,7 @@ void DeviceManager::enableDeviceClockSync(uint64_t repeatInterval) {
 }
 
 void DeviceManager::enableNetDeviceEnumeration(bool enable) {
-#if defined(BUILD_NET_PAL)
+#ifdef BUILD_NET_PAL
     LOG_INFO("Enable net device enumeration: {0}", enable);
     auto iter = std::find_if(deviceEnumerators_.begin(), deviceEnumerators_.end(), [](const std::shared_ptr<IDeviceEnumerator> &enumerator) {  //
         return std::dynamic_pointer_cast<NetDeviceEnumerator>(enumerator) != nullptr;
@@ -258,7 +258,7 @@ void DeviceManager::enableNetDeviceEnumeration(bool enable) {
 }
 
 bool DeviceManager::isNetDeviceEnumerationEnable() const {
-#if defined(BUILD_NET_PAL)
+#ifdef BUILD_NET_PAL
 
     auto iter = std::find_if(deviceEnumerators_.begin(), deviceEnumerators_.end(), [](const std::shared_ptr<IDeviceEnumerator> &enumerator) {  //
         return std::dynamic_pointer_cast<NetDeviceEnumerator>(enumerator) != nullptr;

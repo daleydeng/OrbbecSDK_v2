@@ -29,8 +29,8 @@ add_subdirectory(femtomega) # FemtoMega
 add_subdirectory(bootloader) # Bootloader device
 
 # dependecies:
-add_subdirectory(${OB_3RDPARTY_DIR}/jsoncpp jsoncpp)
-target_link_libraries(${OB_TARGET_DEVICE} PUBLIC jsoncpp::jsoncpp)
+# add_subdirectory(${OB_3RDPARTY_DIR}/jsoncpp jsoncpp)
+target_link_libraries(${OB_TARGET_DEVICE} PUBLIC jsoncpp_lib)
 
 add_library(ob::device ALIAS ${OB_TARGET_DEVICE})
 ob_source_group(ob::device)

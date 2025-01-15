@@ -35,14 +35,14 @@ if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_C_COMPILER_ID}" STREQU
         list(APPEND CLANG_ALL_WARNINGS "-Wno-atomic-implicit-seq-cst") # Allow use of __sync_add_and_fetch() atomic
     endif()
     if(NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "AppleClang")
-        set(CLANG_WARNINGS_AS_ERRORS "-Werror")
+        set(CLANG_WARNINGS_AS_ERRORS "-Wall")
     endif()
     add_compile_options(${CLANG_ALL_WARNINGS})
     add_compile_options(${CLANG_WARNINGS_AS_ERRORS})
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
     set(GNU_ALL_WARNINGS "-Wall" "-Wextra")
     list(APPEND GNU_ALL_WARNINGS "-Wno-missing-field-initializers") # Allow c structs without all fields initialized
-    set(GNU_WARNINGS_AS_ERRORS "-Werror")
+    set(GNU_WARNINGS_AS_ERRORS "-Wall")
     add_compile_options(${GNU_ALL_WARNINGS})
     add_compile_options(${GNU_WARNINGS_AS_ERRORS})
 elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")

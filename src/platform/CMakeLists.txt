@@ -13,12 +13,12 @@ target_include_directories(${OB_TARGET_PAL} PUBLIC ${OB_PUBLIC_HEADERS_DIR} ${CM
 
 if(OB_BUILD_USB_PAL)
     add_subdirectory(usb)
-    add_subdirectory(${OB_3RDPARTY_DIR}/libusb libusb)
-    target_link_libraries(${OB_TARGET_PAL} PUBLIC libusb::libusb)
+    # add_subdirectory(${OB_3RDPARTY_DIR}/libusb libusb)
+    target_include_directories(${OB_TARGET_PAL} PUBLIC ${LIBUSB_INCLUDE_DIRS})
+    target_link_libraries(${OB_TARGET_PAL} PUBLIC ${LIBUSB_LIBRARIES})
 
     if(NOT OB_BUILD_WIN32)
         add_subdirectory(${OB_3RDPARTY_DIR}/libuvc libuvc)
-        target_link_libraries(${OB_TARGET_PAL} PUBLIC libuvc::libuvc)
     endif()
 elseif(OB_BUILD_GMSL_PAL)
     add_subdirectory(usb)
@@ -27,7 +27,7 @@ endif()
 
 if(OB_BUILD_NET_PAL)
     add_subdirectory(ethernet)
-    add_subdirectory(${OB_3RDPARTY_DIR}/live555 live555)
+    # add_subdirectory(${OB_3RDPARTY_DIR}/live555 live555)
     target_link_libraries(${OB_TARGET_PAL} PUBLIC live555::live555)
 endif()
 

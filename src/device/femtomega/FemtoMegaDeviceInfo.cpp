@@ -8,8 +8,12 @@
 #include "ethernet/NetPortGroup.hpp"
 #include "utils/Utils.hpp"
 #include "exception/ObException.hpp"
+
+#ifdef BUILD_NET_PAL
 #include "ethernet/RTSPStreamPort.hpp"
 #include "ethernet/NetDataStreamPort.hpp"
+#endif
+
 namespace libobsensor {
 const std::map<int, std::string> FemtoMegaDeviceNameMap = {
     { 0x06c0, "Femto Mega i" },
@@ -63,12 +67,12 @@ FemtoMegaDeviceInfo::~FemtoMegaDeviceInfo() noexcept {}
 
 std::shared_ptr<IDevice> FemtoMegaDeviceInfo::createDevice() const {
     std::shared_ptr<IDevice> device;
-    if(connectionType_ == "Ethernet") {
+#ifdef BUILD_NET_PAL
+    if(connectionType_ == "Ethernet")
         device = std::make_shared<FemtoMegaNetDevice>(shared_from_this());
-    }
-    else {
+    else
+#endif
         device = std::make_shared<FemtoMegaUsbDevice>(shared_from_this());
-    }
     return device;
 }
 
@@ -87,6 +91,8 @@ std::vector<std::shared_ptr<IDeviceEnumInfo>> FemtoMegaDeviceInfo::pickDevices(c
 
     return femtoMegaDeviceInfos;
 }
+
+#ifdef BUILD_NET_PAL
 
 std::vector<std::shared_ptr<IDeviceEnumInfo>> FemtoMegaDeviceInfo::pickNetDevices(const SourcePortInfoList infoList) {
     std::vector<std::shared_ptr<IDeviceEnumInfo>> femtoMegaDeviceInfos;
@@ -114,5 +120,7 @@ std::vector<std::shared_ptr<IDeviceEnumInfo>> FemtoMegaDeviceInfo::pickNetDevice
 
     return femtoMegaDeviceInfos;
 }
+
+#endif
 
 }  // namespace libobsensor

@@ -28,7 +28,9 @@ file(GLOB_RECURSE SOURCE_FILES ${CMAKE_CURRENT_LIST_DIR}/impl/*.cpp ${CMAKE_CURR
 file(GLOB_RECURSE HEADER_FILES ${CMAKE_CURRENT_LIST_DIR}/impl/*.hpp ${CMAKE_CURRENT_LIST_DIR}/context/*.hpp)
 
 target_sources(OrbbecSDK PRIVATE ${SOURCE_FILES} ${HEADER_FILES})
-target_link_libraries(OrbbecSDK PRIVATE ob::shared ob::core ob::filter ob::platform ob::device ob::pipeline)
+
+
+target_link_libraries(OrbbecSDK PRIVATE ob::shared ob::core ob::filter ob::platform ob::device ob::pipeline libuvc::libuvc)
 target_include_directories(OrbbecSDK PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 target_include_directories(
     OrbbecSDK PUBLIC "$<BUILD_INTERFACE:${OB_PUBLIC_HEADERS_DIR}>" "$<INSTALL_INTERFACE:include>"
@@ -39,7 +41,7 @@ if(UNIX)
     target_link_libraries(OrbbecSDK PRIVATE Threads::Threads)
 endif()
 
-find_package(OpenGL REQUIRED)
+find_package(OpenGL)
 
 if(OPENGL_FOUND)
     include_directories(${OPENGL_INCLUDE_DIR})

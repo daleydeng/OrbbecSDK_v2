@@ -39,7 +39,7 @@
 
 #include <algorithm>
 
-#if defined(BUILD_NET_PAL)
+#ifdef BUILD_NET_PAL
 #include "ethernet/RTSPStreamPort.hpp"
 #endif
 
@@ -590,6 +590,8 @@ void G2XLUSBDevice::initProperties() {
     CATCH_EXCEPTION_AND_EXECUTE({ LOG_ERROR("Set device communication type to ethernet mode failed!"); })
 }
 
+#ifdef BUILD_NET_PAL
+
 G2XLNetDevice::G2XLNetDevice(const std::shared_ptr<const IDeviceEnumInfo> &info) : G2XLDeviceBase(info) {
     init();
 }
@@ -1109,5 +1111,7 @@ void G2XLNetDevice::fetchDeviceInfo() {
     // mark the device as a multi-sensor device with same clock at default
     extensionInfo_["AllSensorsUsingSameClock"] = "true";
 }
+
+#endif
 
 }  // namespace libobsensor

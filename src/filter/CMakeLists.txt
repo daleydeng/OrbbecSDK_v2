@@ -16,14 +16,14 @@ target_sources(filter PRIVATE ${SOURCE_FILES} ${HEADERS_FILES})
 target_link_libraries(filter PUBLIC ob::shared ob::core )
 target_include_directories(filter PUBLIC ${OB_PUBLIC_HEADERS_DIR} ${CMAKE_CURRENT_LIST_DIR})
 
-add_subdirectory(${OB_3RDPARTY_DIR}/dylib dylib)
-target_link_libraries(filter PUBLIC dylib::dylib)
+# add_subdirectory(${OB_3RDPARTY_DIR}/dylib dylib)
+target_include_directories(filter PUBLIC dylib)
 
-add_subdirectory(${OB_3RDPARTY_DIR}/libjpeg libjpeg)
-target_link_libraries(filter PUBLIC libjpeg::libjpeg)
+# add_subdirectory(${OB_3RDPARTY_DIR}/libjpeg libjpeg)
+target_link_libraries(filter PUBLIC libjpeg-turbo::turbojpeg)
 
-add_subdirectory(${OB_3RDPARTY_DIR}/libyuv libyuv)
-target_link_libraries(filter PUBLIC libyuv::libyuv)
+# add_subdirectory(${OB_3RDPARTY_DIR}/libyuv libyuv)
+target_link_libraries(filter PUBLIC yuv)
 
 add_library(ob::filter ALIAS filter)
 ob_source_group(ob::filter)

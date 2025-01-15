@@ -9,9 +9,12 @@
 #include "DevicePids.hpp"
 #include "utils/Utils.hpp"
 #include "exception/ObException.hpp"
+
+#ifdef BUILD_NET_PAL
 #include "ethernet/NetPortGroup.hpp"
 #include "ethernet/RTSPStreamPort.hpp"
 #include "ethernet/NetDataStreamPort.hpp"
+#endif
 
 #include <map>
 
@@ -43,6 +46,8 @@ G2DeviceInfo::G2DeviceInfo(const SourcePortInfoList groupedInfoList) {
         connectionType_     = portInfo->connSpec;
         sourcePortInfoList_ = groupedInfoList;
     }
+
+#ifdef BUILD_NET_PAL
     else if(IS_NET_PORT(firstPortInfo->portType)) {
         auto portInfo = std::dynamic_pointer_cast<const NetSourcePortInfo>(groupedInfoList.front());
 
@@ -62,6 +67,7 @@ G2DeviceInfo::G2DeviceInfo(const SourcePortInfoList groupedInfoList) {
         connectionType_     = "Ethernet";
         sourcePortInfoList_ = groupedInfoList;
     }
+#endif
     else {
         throw invalid_value_exception("Invalid port type");
     }
@@ -71,9 +77,11 @@ G2DeviceInfo::~G2DeviceInfo() noexcept {}
 
 std::shared_ptr<IDevice> G2DeviceInfo::createDevice() const {
     if(pid_ == 0x0671) {
+#ifdef BUILD_NET_PAL
         if(IS_NET_PORT(sourcePortInfoList_.front()->portType)) {
             return std::make_shared<G2XLNetDevice>(shared_from_this());
         }
+#endif
         return std::make_shared<G2XLUSBDevice>(shared_from_this());
     }
     else if(pid_ == 0x0808 || pid_ == 0x0809) {
@@ -98,6 +106,7 @@ std::vector<std::shared_ptr<IDeviceEnumInfo>> G2DeviceInfo::pickDevices(const So
     return G2DeviceInfos;
 }
 
+#ifdef BUILD_NET_PAL
 std::vector<std::shared_ptr<IDeviceEnumInfo>> G2DeviceInfo::pickNetDevices(const SourcePortInfoList infoList) {
     std::vector<std::shared_ptr<IDeviceEnumInfo>> gemini2DeviceInfos;
     auto                                          remainder = FilterNetPortInfoByPid(infoList, Gemini2DevPids);
@@ -125,5 +134,6 @@ std::vector<std::shared_ptr<IDeviceEnumInfo>> G2DeviceInfo::pickNetDevices(const
 
     return gemini2DeviceInfos;
 }
+#endif
 
 }  // namespace libobsensor

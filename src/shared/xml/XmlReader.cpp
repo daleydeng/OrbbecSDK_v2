@@ -2,7 +2,7 @@
 // Licensed under the MIT License.
 
 #include "XmlReader.hpp"
-#include "tinyxml2.hpp"
+#include "tinyxml2.h"
 
 #include "logger/Logger.hpp"
 #include "exception/ObException.hpp"

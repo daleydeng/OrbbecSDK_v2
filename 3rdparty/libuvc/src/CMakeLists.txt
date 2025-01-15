@@ -3,6 +3,12 @@ project(libuvc
   VERSION 0.0.6
   LANGUAGES C
 )
+
+get_filename_component(PREFIX ${CMAKE_COMMAND} DIRECTORY)
+set(PREFIX "${PREFIX}/..")
+set(SYS_INC "${PREFIX}/include")
+include_directories(${SYS_INC})
+
 # subdirectory_include(CORE_INC)
 # Additional search scripts path for libusb-1.0, libjpeg, OpenCV
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
@@ -25,6 +31,9 @@ endif()
 option(BUILD_EXAMPLE "Build example program" OFF)
 option(BUILD_TEST "Build test program" OFF)
 option(ENABLE_UVC_DEBUGGING "Enable UVC debugging" OFF)
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBUSB REQUIRED libusb-1.0)
 
 set(libuvc_DESCRIPTION "A cross-platform library for USB video devices")
 set(libuvc_URL "https://github.com/libuvc/libuvc")
@@ -104,10 +113,10 @@ foreach(target_name IN LISTS UVC_TARGETS)
       $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
       $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
       $<INSTALL_INTERFACE:include>
-      ${LibUSB_INCLUDE_DIRS}
+      ${LIBUSB_INCLUDE_DIRS}
   )
 
-  target_link_libraries(${target_name} libusb::libusb)
+  target_link_libraries(${target_name} ${LIBUSB_LIBRARIES})
 
   if(JPEG_FOUND)
      include_directories( ${PROJECT_SOURCE_DIR}/../libjpeg/ )

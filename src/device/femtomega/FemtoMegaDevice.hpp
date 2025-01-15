@@ -26,6 +26,7 @@ private:
     uint64_t frameTimeFreq_  = 1000;
 };
 
+#ifdef BUILD_NET_PAL
 class FemtoMegaNetDevice : public DeviceBase {
 public:
     FemtoMegaNetDevice(const std::shared_ptr<const IDeviceEnumInfo> &info);
@@ -48,4 +49,5 @@ private:
     StreamProfileList allVideoStreamProfileList_;  // fetch from device via vendor-specific protocol for all types of video stream
 };
 
+#endif // BUILD_NET_PAL
 }  // namespace libobsensor

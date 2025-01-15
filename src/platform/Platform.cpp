@@ -30,7 +30,7 @@ Platform::Platform() {
     palMap_.insert(std::make_pair("usb", usbPal));
 #endif
 
-#if defined(BUILD_NET_PAL)
+#ifdef BUILD_NET_PAL
     auto netPal = createNetPal();
     palMap_.insert(std::make_pair("net", netPal));
 #endif

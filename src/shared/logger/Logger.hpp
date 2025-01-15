@@ -76,7 +76,5 @@ private:
     spdlog::sink_ptr consoleSink_;
     spdlog::sink_ptr fileSink_;
     spdlog::sink_ptr callbackSink_;
-
-    std::shared_ptr<spdlog::details::registry> spdlogRegistry_;  // handle spdlog registry instance to control it's life cycle
 };
 }  // namespace libobsensor
